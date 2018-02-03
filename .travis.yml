@@ -1,0 +1,12 @@
+language: cpp
+sudo: required
+dist: trusty
+compiler:
+- clang
+os:
+- linux
+script:
+- mkdir -p build
+- cd build
+- cmake ..
+- cmake --build .
