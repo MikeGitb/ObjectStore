@@ -3,11 +3,21 @@ sudo: false
 dist: trusty
 compiler:
 - clang
-os:
-- linux
+
+#necessary to get an up to date standard library
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - g++-7
+
 script:
 - mkdir -p build
 - cd build
-- cmake ..
+- c++ -v
+- cmake .. -DCMAKE_BUILD_TYPE=Release
 - cmake --build .
-- ctest .
+- ctest --output-on-failure .
+
+
