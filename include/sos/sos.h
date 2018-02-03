@@ -5,9 +5,10 @@
 #include <type_traits>
 #include <atomic>
 #include <cassert>
+#include <algorithm>
 
-namespace mgb::sos {
-	constexpr const char* my_name() { return "Shared Object Store Library";  }
+namespace mgb { namespace sos {
+	constexpr const char* my_name() { return "Shared Object Store Library"; }
 	using idx_t = std::intptr_t;
 
 	namespace detail {
@@ -78,7 +79,7 @@ namespace mgb::sos {
 				inc_ref();
 			}
 			Handle(Handle&& other)
-				: ptr(std::exchange(other.ptr,nullptr))
+				: ptr(std::exchange(other.ptr, nullptr))
 			{
 			}
 			Handle& operator=(const Handle& other)
@@ -91,7 +92,7 @@ namespace mgb::sos {
 			Handle& operator=(Handle&& other)
 			{
 				dec_ref();
-				ptr = std::exchange(pther.ptr,nullptr);
+				ptr = std::exchange(other.ptr, nullptr);
 			}
 
 
@@ -111,10 +112,9 @@ namespace mgb::sos {
 			return Handle(&e);
 		}
 
-		private:
-			detail::Store < detail::Slot<T>, Size > store;
+	private:
+		detail::Store < detail::Slot<T>, Size > store;
 	};
-}
-
+}}
 
 #endif // !MGB_SHARED_OBJECT_STORE_H_GUARD_SOS_H

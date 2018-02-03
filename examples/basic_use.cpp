@@ -1,4 +1,4 @@
-#include <sos\sos.h>
+#include <sos/sos.h>
 
 #include <iostream>
 #include <string>
@@ -42,5 +42,4 @@ int main() {
 	}
 	assert(MyType::getCount() == 0);
 	std::cout << "Complete!" << std::endl;
-	cin.get();
 }
