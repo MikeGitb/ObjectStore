@@ -50,66 +50,76 @@ namespace mgb { namespace sos {
 		};
 	}
 
-	template<class T, idx_t Size>
-	class SharedObjectStore {
+	template<class T>
+	class Handle {
+		template<class U, idx_t Size>
+		friend class SharedObjectStore;
 
+		detail::Slot<T>* ptr;
+
+		Handle(detail::Slot<T>* p)
+			: ptr(p)
+		{
+			ptr->ref_count()++;
+		}
+		void dec_ref() {
+			if (ptr && (ptr->ref_count().fetch_sub(1) == 1)) {
+				ptr->destroy();
+				ptr = nullptr;
+			}
+		}
+		void inc_ref() const {
+			if (ptr) {
+				ptr->ref_count().fetch_add(1,std::memory_order_relaxed);
+			}
+		}
 
 	public:
-		class Handle {
-			friend SharedObjectStore;
-			detail::Slot<T>* ptr;
+		Handle(const Handle& other)
+			: ptr(other.ptr)
+		{
+			inc_ref();
+		}
+		Handle(Handle&& other)
+			: ptr(std::exchange(other.ptr, nullptr))
+		{
+		}
+		Handle& operator=(const Handle& other)
+		{
+			other.inc_ref();
+			dec_ref();
+			ptr = other.ptr;
+			return *this;
+		}
+		Handle& operator=(Handle&& other)
+		{
+			dec_ref();
+			ptr = std::exchange(other.ptr, nullptr);
+			return *this;
+		}
+		T* operator->() const
+		{
+			assert(ptr);
+			return &ptr->object();
+		}
+		T& operator*() const
+		{
+			assert(ptr);
+			return ptr->object();
+		}
+		~Handle()
+		{
+			dec_ref();
+		}
+	};
 
-			Handle(detail::Slot<T>* p) : ptr(p) {
-				ptr->ref_count()++;
-			}
-			void dec_ref() const {
-				auto& ref_cnt = ptr->ref_count();
-				if (ref_cnt-- == 1) {
-					ptr->destroy();
-				}
-			}
-			void inc_ref() const {
-				ptr->ref_count()++;
-			}
-
-		public:
-			Handle(const Handle& other)
-				: ptr(other.ptr)
-			{
-				inc_ref();
-			}
-			Handle(Handle&& other)
-				: ptr(std::exchange(other.ptr, nullptr))
-			{
-			}
-			Handle& operator=(const Handle& other)
-			{
-				other.inc_ref();
-				dec_ref();
-				ptr = other.ptr;
-				return *this;
-			}
-			Handle& operator=(Handle&& other)
-			{
-				dec_ref();
-				ptr = std::exchange(other.ptr, nullptr);
-			}
-
-
-			T * operator->() const { return &ptr->object(); }
-			~Handle()
-			{
-				auto& ref_cnt = ptr->ref_count();
-				if (ref_cnt-- == 1) {
-					ptr->destroy();
-				}
-			}
-		};
-
+	template<class T, idx_t Size>
+	class SharedObjectStore {
+	public:
 		template<class ... ARGS>
-		Handle create(ARGS&& ... args) {
+		Handle<T> create(ARGS&& ... args) {
 			auto& e = store.emplace(args...);
-			return Handle(&e);
+			return Handle<T>(&e);
 		}
 
 	private:
