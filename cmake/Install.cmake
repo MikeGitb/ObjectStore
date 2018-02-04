@@ -1,13 +1,16 @@
+if(WIN32 AND NOT CYGWIN)
+    set(DEF_INSTALL_CMAKE_DIR CMake)
+else()
+    set(DEF_INSTALL_CMAKE_DIR lib/cmake/date)
+endif()
 
-install(TARGETS sos EXPORT SosTargets
-	INCLUDES DESTINATION include
-)
-install(EXPORT SosTargets
-	FILE SosTargets.cmake
+install( TARGETS sos EXPORT SosConfig )
+install( EXPORT SosConfig
+	FILE SosConfig.cmake
 	NAMESPACE Sos::
-	DESTINATION cmake
+	DESTINATION ${DEF_INSTALL_CMAKE_DIR}
 )
-install(DIRECTORY include/sos DESTINATION include)
+install( DIRECTORY include/ DESTINATION include/ )
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file("SosConfigVersion.cmake"
@@ -15,8 +18,15 @@ write_basic_package_version_file("SosConfigVersion.cmake"
 	COMPATIBILITY SameMajorVersion
 )
 
-install(FILES "cmake/SosConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/SosConfigVersion.cmake"
-	DESTINATION cmake
+install(
+	FILES
+		"${CMAKE_CURRENT_BINARY_DIR}/SosConfigVersion.cmake"
+		"LICENSE"
+	DESTINATION
+		${DEF_INSTALL_CMAKE_DIR}
 )
 
+
+
 INCLUDE(CPack)
+set(CPACK_RESOURCE_FILE_LICENSE LICENSE)

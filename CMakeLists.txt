@@ -22,4 +22,3 @@ add_subdirectory(tests)
 
 include(cmake/Install.cmake)
 
-
