@@ -16,7 +16,7 @@ namespace mgb { namespace sos {
 
 		template<class T>
 		class Slot {
-			std::aligned_storage_t<sizeof(T), alignof(T)> data;
+			std::aligned_storage_t<sizeof(T), alignof(T)> data{};
 			std::atomic_int ref_cnt{ 0 };
 
 		public:
@@ -47,6 +47,7 @@ namespace mgb { namespace sos {
 
 		template<class T, idx_t Size>
 		class Store {
+		public:
 			std::array<T, Size> data;
 			std::atomic<typename std::array<T, Size>::iterator> last_next = { data.begin() };
 			auto next_free_slot() noexcept {
@@ -63,7 +64,6 @@ namespace mgb { namespace sos {
 				}
 				return data.end();
 			}
-		public:
 			template<class ... ARGS>
 			T& emplace(ARGS&& ... args)
 			{
@@ -98,7 +98,8 @@ namespace mgb { namespace sos {
 			assert(ptr);
 			ptr->add_ref();
 		}
-		void dec_ref() noexcept( noexcept(ptr->remove_ref())) {
+		void dec_ref() noexcept
+		{
 			if ( ptr ) {
 				ptr->remove_ref();
 			}
@@ -252,6 +253,14 @@ namespace mgb { namespace sos {
 		Handle<T> create(ARGS&& ... args) {
 			return { store.emplace(args...) };
 		}
+		idx_t live_objects_approx() {
+			return std::count_if(store.data.begin(), store.data.end(), [](const auto& s) { return !s.is_free(); });
+		}
+		idx_t remaining_capacity_approx() const
+		{
+			return std::count_if(store.data.begin(), store.data.end(), [](const auto& s) { return s.is_free(); });
+		}
+		constexpr idx_t capacity() { return Size; }
 
 	private:
 		detail::Store < detail::Slot<T>, Size > store;
