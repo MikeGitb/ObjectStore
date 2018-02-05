@@ -63,6 +63,36 @@ TEST_CASE("create_multiple_objects", "[refcounting]") {
 	CHECK(E::getCount() == 0);
 }
 
+struct TagTest1c {};
+TEST_CASE("create_multiple_objects_const", "[refcounting]") {
+
+	using E = MyType<TagTest1c>;
+	sos::SharedObjectStore<E, 5> store;
+	{
+		auto h1 = store.create("Hello1").lock();
+		CHECK(h1->message == "Hello1");
+		CHECK(E::getCount() == 1);
+
+		auto h2 = store.create("Hello2").lock();
+		auto h3 = store.create("Hello3").lock();
+		CHECK(E::getCount() == 3);
+		{
+			auto h4 = store.create("Hello4").lock();
+			auto h5 = store.create("Hello5").lock();
+			CHECK(E::getCount() == 5);
+			CHECK(h5->message == "Hello5");
+		}
+		CHECK(E::getCount() == 3);
+
+		auto h6 = store.create("Hello6").lock();
+		auto h7 = store.create("Hello7").lock();
+
+		CHECK(h6->message == "Hello6");
+		CHECK(E::getCount() == 5);
+	}
+	CHECK(E::getCount() == 0);
+}
+
 struct TagTest2 {};
 TEST_CASE("Assignments", "[refcounting]") {
 
@@ -77,6 +107,37 @@ TEST_CASE("Assignments", "[refcounting]") {
 		auto h3 = store.create("Hello3");
 		CHECK(E::getCount() == 3);
 
+		h2 = std::move(h3);
+		CHECK(E::getCount() == 2);
+
+		CHECK(h2->message == "Hello3");
+		h2 = std::move(h1);
+		CHECK(h2->message != "Hello3");
+		CHECK(E::getCount() == 1);
+
+		h1 = store.create("Temp1");
+		CHECK(E::getCount() == 2);
+		h1 = std::move(h3);
+		CHECK(E::getCount() == 1);
+
+	}
+	CHECK(E::getCount() == 0);
+}
+
+struct TagTest2c {};
+TEST_CASE("Assignments_const", "[refcounting]") {
+
+	using E = MyType<TagTest2c>;
+	sos::SharedObjectStore<E, 5> store;
+	{
+		auto h1 = store.create("Hello1").lock();
+		CHECK(h1->message == "Hello1");
+		CHECK(E::getCount() == 1);
+
+		auto h2 = store.create("Hello2").lock();
+		auto h3 = store.create("Hello3").lock();
+		CHECK(E::getCount() == 3);
+
 		h2 = h3;
 		CHECK(E::getCount() == 2);
 
@@ -85,7 +146,7 @@ TEST_CASE("Assignments", "[refcounting]") {
 		CHECK(h2->message != h3->message);
 		CHECK(E::getCount() == 2);
 
-		h1 = store.create("Temp1");
+		h1 = store.create("Temp1").lock();
 		CHECK(E::getCount() == 3);
 		h1 = std::move(h3);
 		CHECK(E::getCount() == 2);
