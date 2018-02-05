@@ -9,7 +9,7 @@
 #include <stdexcept>
 
 namespace mgb { namespace sos {
-	constexpr const char* my_name() { return "Shared Object Store Library"; }
+	constexpr const char* my_name() noexcept { return "Shared Object Store Library"; }
 	using idx_t = std::intptr_t;
 
 	namespace detail {
@@ -29,27 +29,27 @@ namespace mgb { namespace sos {
 				}
 				return false;
 			}
-			void add_ref() {
+			void add_ref() noexcept {
 				ref_cnt.fetch_add(1,std::memory_order_relaxed);
 			}
-			void remove_ref() {
+			void remove_ref() noexcept {
 				assert(ref_cnt > 0);
 				if (ref_cnt.fetch_sub(1) == 2) {
 					object()->~T();
 					ref_cnt = 0;
 				}
 			}
-			T* object() { return reinterpret_cast<T*>(&data); }
+			T* object() noexcept { return reinterpret_cast<T*>(&data); }
 
-			bool is_free() const { return ref_cnt.load(std::memory_order_relaxed) == 0; }
-			bool is_uniquely_owned() const { return ref_cnt == 2; }
+			bool is_free() const noexcept { return ref_cnt.load(std::memory_order_relaxed) == 0; }
+			bool is_uniquely_owned() const noexcept { return ref_cnt == 2; }
 		};
 
 		template<class T, idx_t Size>
 		class Store {
 			std::array<T, Size> data;
 			std::atomic<typename std::array<T, Size>::iterator> last_next = { data.begin() };
-			auto next_free_slot() {
+			auto next_free_slot() noexcept {
 				const auto start = last_next.load();
 				auto pos = std::find_if(start, data.end(), [](auto&& s) {return s.is_free(); });
 				if (pos != data.end())
@@ -92,40 +92,55 @@ namespace mgb { namespace sos {
 
 		detail::Slot<T>* ptr;
 
-		Handle(detail::Slot<T>* p)
-			: ptr(p)
+		Handle(detail::Slot<T>& p) noexcept
+			: ptr(&p)
 		{
 			assert(ptr);
 			ptr->add_ref();
 		}
-		void dec_ref() {
+		void dec_ref() noexcept( noexcept(ptr->remove_ref())) {
 			if ( ptr ) {
 				ptr->remove_ref();
 			}
 		}
 	public:
-		Handle(Handle&& other)
+		Handle(Handle&& other) noexcept
 			: ptr(std::exchange(other.ptr, nullptr))
 		{
 		}
 
-		Handle& operator=(Handle&& other)
+		Handle& operator=(Handle&& other) noexcept
 		{
 			dec_ref();
 			ptr = std::exchange(other.ptr, nullptr);
 			return *this;
 		}
-		T* operator->() const
+		T* operator->() noexcept
 		{
 			assert(ptr);
 			return ptr->object();
 		}
-		T& operator*() const
+		const T* operator->() const noexcept
+		{
+			assert(ptr);
+			return ptr->object();
+		}
+		T& operator*() noexcept
 		{
 			assert(ptr);
 			return *ptr->object();
 		}
-		operator T& ()
+		const T& operator*() const noexcept
+		{
+			assert(ptr);
+			return *ptr->object();
+		}
+		operator T& () noexcept
+		{
+			assert(ptr);
+			return ptr->object();
+		}
+		operator const T& () const noexcept
 		{
 			assert(ptr);
 			return ptr->object();
@@ -134,11 +149,11 @@ namespace mgb { namespace sos {
 		{
 			dec_ref();
 		}
-		bool unique() {
+		bool unique() const noexcept  {
 			assert(ptr);
 			return ptr->is_uniquely_owned();
 		}
-		ConstHandle<T> lock() && ;
+		ConstHandle<T> lock() && noexcept ;
 	};
 
 	template<class T>
@@ -146,61 +161,61 @@ namespace mgb { namespace sos {
 
 		detail::Slot<T>* ptr;
 
-		void dec_ref() {
+		void dec_ref() const noexcept {
 			if (ptr) {
 				ptr->remove_ref();
 			}
 		}
-		void inc_ref() const {
+		void inc_ref() const noexcept {
 			if (ptr) {
 				ptr->add_ref();
 			}
 		}
 
 	public:
-		ConstHandle(const ConstHandle& other)
+		ConstHandle(const ConstHandle& other) noexcept
 			: ptr(other.ptr)
 		{
 			inc_ref();
 		}
-		ConstHandle(ConstHandle&& other)
+		ConstHandle(ConstHandle&& other) noexcept
 			: ptr(std::exchange(other.ptr, nullptr))
 		{
 		}
-		ConstHandle(Handle<T>&& other)
+		ConstHandle(Handle<T>&& other) noexcept
 			: ptr(std::exchange(other.ptr, nullptr))
 		{
 		}
-		ConstHandle& operator=(const ConstHandle& other)
+		ConstHandle& operator=(const ConstHandle& other) noexcept
 		{
 			other.inc_ref();
 			dec_ref();
 			ptr = other.ptr;
 			return *this;
 		}
-		ConstHandle& operator=(ConstHandle&& other)
+		ConstHandle& operator=(ConstHandle&& other) noexcept
 		{
 			dec_ref();
 			ptr = std::exchange(other.ptr, nullptr);
 			return *this;
 		}
-		ConstHandle& operator=(Handle<T>&& other)
+		ConstHandle& operator=(Handle<T>&& other) noexcept
 		{
 			dec_ref();
 			ptr = std::exchange(other.ptr, nullptr);
 			return *this;
 		}
-		const T* operator->() const
+		const T* operator->() const noexcept
 		{
 			assert(ptr);
 			return ptr->object();
 		}
-		const T& operator*() const
+		const T& operator*() const noexcept
 		{
 			assert(ptr);
 			return *ptr->object();
 		}
-		operator T const & ()
+		operator T const & () const noexcept
 		{
 			assert(ptr);
 			return ptr->object();
@@ -209,11 +224,13 @@ namespace mgb { namespace sos {
 		{
 			dec_ref();
 		}
-		bool unique() {
+		bool unique() const noexcept
+		{
 			assert(ptr);
 			return ptr->is_uniquely_owned();
 		}
-		Handle<T> turn_into_modifiable_handle() && {
+		Handle<T> turn_into_modifiable_handle() &&
+		{
 			if (!unique()) {
 				throw std::runtime_error("Could not turn const handle into modifiable handle, as const handle wasn't unique owner of resource");
 			}
@@ -222,7 +239,9 @@ namespace mgb { namespace sos {
 	};
 
 	template<class T>
-	ConstHandle<T> Handle<T>::lock() && {
+	ConstHandle<T> Handle<T>::lock() && noexcept
+	{
+		assert(ptr);
 		return ConstHandle<T>(std::move(*this));
 	}
 
@@ -231,8 +250,7 @@ namespace mgb { namespace sos {
 	public:
 		template<class ... ARGS>
 		Handle<T> create(ARGS&& ... args) {
-			auto& e = store.emplace(args...);
-			return Handle<T>(&e);
+			return { store.emplace(args...) };
 		}
 
 	private:
