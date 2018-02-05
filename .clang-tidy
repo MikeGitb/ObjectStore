@@ -1,0 +1,2 @@
+Checks: 'cppcoreguidelines-*, modernize-*, -cppcoreguidelines-pro-bounds-array-to-pointer-decay, clang-analyzer-*'
+HeaderFilterRegex: "sos.h"
