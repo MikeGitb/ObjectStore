@@ -13,7 +13,9 @@ namespace {
 	//The tag is included to allow each test to have its own static count, allowing to run the tests in parallel and unaffected from each other
 	template<class Tag>
 	struct MyType {
+	private:
 		static std::atomic_int i;
+	public:
 		std::string message;
 		MyType() { i++; }
 		MyType(std::string s)
@@ -21,7 +23,10 @@ namespace {
 		{
 			i++;
 		}
-
+		MyType(const MyType& other) = delete;
+		MyType(MyType&& other) = delete;
+		MyType& operator=(const MyType&) = delete;
+		MyType& operator=(MyType &&) =delete;
 		~MyType()
 		{
 			i--;
@@ -83,14 +88,17 @@ TEST_CASE("create_multiple_objects_const", "[refcounting]") {
 			CHECK(h5->message == "Hello5");
 		}
 		CHECK(E::getCount() == 3);
+		CHECK(store.remaining_capacity_approx() == 2);
 
 		auto h6 = store.create("Hello6").lock();
 		auto h7 = store.create("Hello7").lock();
 
 		CHECK(h6->message == "Hello6");
 		CHECK(E::getCount() == 5);
+		CHECK(store.remaining_capacity_approx() == 0);
 	}
 	CHECK(E::getCount() == 0);
+	CHECK(store.remaining_capacity_approx() == 5);
 }
 
 struct TagTest2 {};
@@ -114,6 +122,7 @@ TEST_CASE("Assignments", "[refcounting]") {
 		h2 = std::move(h1);
 		CHECK(h2->message != "Hello3");
 		CHECK(E::getCount() == 1);
+		CHECK(store.remaining_capacity_approx() == 4);
 
 		h1 = store.create("Temp1");
 		CHECK(E::getCount() == 2);
@@ -122,6 +131,7 @@ TEST_CASE("Assignments", "[refcounting]") {
 
 	}
 	CHECK(E::getCount() == 0);
+	CHECK(store.remaining_capacity_approx() == 5);
 }
 
 struct TagTest2c {};
@@ -140,6 +150,7 @@ TEST_CASE("Assignments_const", "[refcounting]") {
 
 		h2 = h3;
 		CHECK(E::getCount() == 2);
+		CHECK(store.remaining_capacity_approx() == 3);
 
 		CHECK(h2->message == h3->message);
 		h2 = h1;
