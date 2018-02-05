@@ -1,7 +1,7 @@
 if(WIN32 AND NOT CYGWIN)
     set(DEF_INSTALL_CMAKE_DIR CMake)
 else()
-    set(DEF_INSTALL_CMAKE_DIR lib/cmake/date)
+    set(DEF_INSTALL_CMAKE_DIR lib/cmake/sos)
 endif()
 
 install( TARGETS sos EXPORT SosConfig )
