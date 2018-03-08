@@ -21,7 +21,7 @@ else()
 	target_compile_options(sos-tests PUBLIC -Wall -Wextra)
 endif()
 
-include(libs/catch2/Catch.cmake)
 
-catch_discover_tests(sos-tests)
+include(libs/catch2/ParseAndAddCatchTests.cmake)
+ParseAndAddCatchTests(sos-tests)
 
