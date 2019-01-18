@@ -7,10 +7,17 @@
 #include <cassert>
 #include <algorithm>
 #include <stdexcept>
+#include <thread>
+#include <new>
 
 namespace mgb { namespace sos {
 	constexpr const char* my_name() noexcept { return "Shared Object Store Library"; }
 	using idx_t = std::intptr_t;
+
+	template<class T>
+	struct bad_alloc : std::bad_alloc {
+		const char* what() const noexcept override { return "No free slot in shared object store found"; }
+	};
 
 	namespace detail {
 
@@ -67,10 +74,18 @@ namespace mgb { namespace sos {
 			template<class ... ARGS>
 			T& emplace(ARGS&& ... args)
 			{
-				auto pos = data.begin();
-				while (!pos->try_create(std::forward<ARGS>(args)...))
+				int  fail_cnt = 0;
+				auto pos = next_free_slot();
+				while( pos == data.end() || !pos->try_create( std::forward<ARGS>( args )... ) )
 				{
 					pos = next_free_slot();
+					if (pos == data.end()) {
+						std::this_thread::yield();
+					}
+					fail_cnt++;
+					if (fail_cnt > 10) {
+						throw sos::bad_alloc<Store>();
+					}
 				}
 				last_next = pos + 1;
 				return *pos;
