@@ -46,7 +46,7 @@ namespace mgb { namespace sos {
 					ref_cnt = 0;
 				}
 			}
-			T* object() noexcept { return reinterpret_cast<T*>(&data); }
+			T* object() noexcept { return std::launder(reinterpret_cast<T*>(&data)); }
 
 			bool is_free() const noexcept { return ref_cnt.load(std::memory_order_relaxed) == 0; }
 			bool is_uniquely_owned() const noexcept { return ref_cnt == 2; }
@@ -105,7 +105,7 @@ namespace mgb { namespace sos {
 		template<class>
 		friend class ConstHandle;
 
-		detail::Slot<T>* ptr;
+		detail::Slot<T>* ptr = nullptr;
 
 		Handle(detail::Slot<T>& p) noexcept
 			: ptr(&p)
@@ -165,6 +165,9 @@ namespace mgb { namespace sos {
 		{
 			dec_ref();
 		}
+
+		bool empty() const noexcept { return ptr == nullptr; }
+
 		bool unique() const noexcept  {
 			assert(ptr);
 			return ptr->is_uniquely_owned();
@@ -175,7 +178,7 @@ namespace mgb { namespace sos {
 	template<class T>
 	class ConstHandle {
 
-		detail::Slot<T>* ptr;
+		detail::Slot<T>* ptr = nullptr;
 
 		void dec_ref() const noexcept {
 			if (ptr) {
@@ -189,6 +192,7 @@ namespace mgb { namespace sos {
 		}
 
 	public:
+		constexpr ConstHandle() noexcept = default;
 		ConstHandle(const ConstHandle& other) noexcept
 			: ptr(other.ptr)
 		{
@@ -240,6 +244,11 @@ namespace mgb { namespace sos {
 		{
 			dec_ref();
 		}
+
+		bool empty() const noexcept
+		{
+			return ptr != nullptr;
+		}
 		bool unique() const noexcept
 		{
 			assert(ptr);
@@ -268,14 +277,14 @@ namespace mgb { namespace sos {
 		Handle<T> create(ARGS&& ... args) {
 			return { store.emplace(args...) };
 		}
-		idx_t live_objects_approx() {
+		idx_t live_objects_approx() noexcept {
 			return std::count_if(store.data.begin(), store.data.end(), [](const auto& s) { return !s.is_free(); });
 		}
-		idx_t remaining_capacity_approx() const
+		idx_t remaining_capacity_approx() const noexcept
 		{
 			return std::count_if(store.data.begin(), store.data.end(), [](const auto& s) { return s.is_free(); });
 		}
-		constexpr idx_t capacity() { return Size; }
+		constexpr idx_t capacity() noexcept { return Size; }
 
 	private:
 		detail::Store < detail::Slot<T>, Size > store;
