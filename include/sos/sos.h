@@ -139,12 +139,12 @@ namespace mgb { namespace sos {
 		operator T& () noexcept
 		{
 			assert(ptr);
-			return ptr->object();
+			return *ptr->object();
 		}
 		operator const T& () const noexcept
 		{
 			assert(ptr);
-			return ptr->object();
+			return *ptr->object();
 		}
 		~Handle()
 		{
@@ -219,7 +219,7 @@ namespace mgb { namespace sos {
 		operator T const & () const noexcept
 		{
 			assert(ptr);
-			return ptr->object();
+			return *ptr->object();
 		}
 		~ConstHandle()
 		{
