@@ -4,8 +4,6 @@ set(Sos_VERSION 0.1)
 
 project(SharedObjectStore)
 
-set(CMAKE_CXX_STANDARD 14)
-
 add_library(sos INTERFACE)
 add_library(Sos::sos ALIAS sos)
 target_include_directories(sos INTERFACE
