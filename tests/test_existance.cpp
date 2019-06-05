@@ -24,8 +24,9 @@ TEST_CASE( "Compilation", "[sos][General]" )
 	[[maybe_unused]] auto i4 = mut_handle->i;
 
 	auto handle = std::move( mut_handle ).lock();
+	CHECK( mut_handle.empty() );
+	[[maybe_unused]] auto i5 = static_cast<const TestStruct&>( handle );
+	[[maybe_unused]] auto i6 = *handle;
+	[[maybe_unused]] auto i7 = handle->i;
 
-	[[maybe_unused]] auto i5 = static_cast<const TestStruct&>( mut_handle );
-	[[maybe_unused]] auto i6 = *mut_handle;
-	[[maybe_unused]] auto i7 = mut_handle->i;
 }
