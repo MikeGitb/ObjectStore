@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 
+option(SOS_INCLUDE_TESTS "Include small object store tests" OFF)
+option(SOS_INCLUDE_EXAMPLES "Include small object store tests" OFF)
+
 set(Sos_VERSION 0.1)
 
 project(SharedObjectStore)
@@ -12,11 +15,14 @@ target_include_directories(sos INTERFACE
 )
 target_compile_features(sos INTERFACE cxx_std_17)
 
+if(SOS_INCLUDE_EXAMPLES)
+	add_subdirectory(examples)
+endif()
 
-add_subdirectory(examples)
-
-enable_testing()
-add_subdirectory(tests)
+if(SOS_INCLUDE_TESTS)
+	enable_testing()
+	add_subdirectory(tests)
+endif()
 
 include(cmake/Install.cmake)
 
