@@ -56,9 +56,9 @@ namespace mgb { namespace sos {
 		class Store {
 		public:
 			std::array<T, Size> data;
-			std::atomic<typename std::array<T, Size>::iterator> last_next = { data.begin() };
+			std::atomic<std::size_t> last_next = { 0 };
 			auto next_free_slot() noexcept {
-				const auto start = last_next.load();
+				const auto start = data.begin()+last_next.load();
 				auto pos = std::find_if(start, data.end(), [](auto&& s) {return s.is_free(); });
 				if (pos != data.end())
 				{
@@ -87,7 +87,7 @@ namespace mgb { namespace sos {
 						throw sos::bad_alloc<Store>();
 					}
 				}
-				last_next = pos + 1;
+				last_next = pos - data.begin() + 1;
 				return *pos;
 			}
 		};
