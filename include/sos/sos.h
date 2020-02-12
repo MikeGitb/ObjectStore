@@ -274,7 +274,7 @@ namespace mgb { namespace sos {
 	class SharedObjectStore {
 	public:
 		template<class ... ARGS>
-		Handle<T> create(ARGS&& ... args) {
+		[[nodiscard]] Handle<T> create(ARGS&& ... args) {
 			return { store.emplace(args...) };
 		}
 		idx_t live_objects_approx() noexcept {
