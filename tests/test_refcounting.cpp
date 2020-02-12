@@ -38,6 +38,8 @@ namespace {
 	std::atomic_int MyType<Tag>::i{ 0 };
 }
 
+
+
 struct TagTest1 {};
 TEST_CASE("create_multiple_objects", "[refcounting]") {
 
@@ -191,6 +193,37 @@ TEST_CASE("Container", "[refcounting]") {
 		CHECK(handles[i]->message == std::to_string(i));
 	}
 
+}
+
+struct Tag4 {};
+TEST_CASE("number_of_object_equals_number_of_created_objects_that_have_handle", "[refcounting]")
+{
+	using E = MyType<Tag4>;
+	sos::SharedObjectStore<E, 45> store;
+	CHECK(E::getCount() == 0);
+
+	auto h1 = store.create();
+	CHECK(E::getCount() == 1);
+
+	auto h2 = store.create();
+	auto h3 = store.create();
+	CHECK(E::getCount() == 3);
+
+	{
+		auto h = store.create();
+		CHECK(E::getCount() == 4);
+	}
+	CHECK(E::getCount() == 3);
+	store.create();
+}
+
+struct Tag5 {};
+TEST_CASE("newly_created_object_is_uniquely_owned", "[refcounting]")
+{
+	using E = MyType<Tag5>;
+	sos::SharedObjectStore<E, 45> store;
+	auto h = store.create();
+	CHECK(h.unique());
 }
 
 
