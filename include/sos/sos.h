@@ -40,7 +40,7 @@ namespace mgb { namespace sos {
 				ref_cnt.fetch_add(1,std::memory_order_relaxed);
 			}
 			void remove_ref() noexcept {
-				assert(ref_cnt > 0);
+				assert(ref_cnt > 1);
 				if (ref_cnt.fetch_sub(1) == 2) {
 					object()->~T();
 					ref_cnt = 0;
