@@ -93,6 +93,13 @@ namespace mgb { namespace sos {
 		};
 	}
 
+
+	/*
+	* Note: Both ConstHandle, as well as Handle
+	* Have many constexpr member functions, constructors and operators,
+	* but they can only be used in a constexpr context when the handle is empty
+	*/
+
 	template<class T>
 	class ConstHandle;
 
@@ -113,19 +120,24 @@ namespace mgb { namespace sos {
 			assert(ptr);
 			ptr->add_ref();
 		}
-		void dec_ref() noexcept
+		constexpr void dec_ref() noexcept
 		{
 			if ( ptr ) {
 				ptr->remove_ref();
 			}
 		}
 	public:
-		Handle(Handle&& other) noexcept
+		// A mutable handle can not be copied
+		constexpr Handle( const Handle& other ) = delete;
+		constexpr Handle& operator=( const Handle& other ) = delete;
+
+		constexpr Handle() noexcept = default;
+		constexpr Handle(Handle&& other) noexcept
 			: ptr(std::exchange(other.ptr, nullptr))
 		{
 		}
 
-		Handle& operator=(Handle&& other) noexcept
+		constexpr Handle& operator=( Handle&& other ) noexcept
 		{
 			dec_ref();
 			ptr = std::exchange(other.ptr, nullptr);
@@ -166,9 +178,10 @@ namespace mgb { namespace sos {
 			dec_ref();
 		}
 
-		bool empty() const noexcept { return ptr == nullptr; }
+		constexpr bool empty() const noexcept { return ptr == nullptr; }
 
-		bool unique() const noexcept  {
+		bool unique() const noexcept
+		{
 			assert(ptr);
 			return ptr->is_uniquely_owned();
 		}
@@ -180,12 +193,14 @@ namespace mgb { namespace sos {
 
 		detail::Slot<T>* ptr = nullptr;
 
-		void dec_ref() const noexcept {
+		constexpr void dec_ref() const noexcept
+		{
 			if (ptr) {
 				ptr->remove_ref();
 			}
 		}
-		void inc_ref() const noexcept {
+		constexpr void inc_ref() const noexcept
+		{
 			if (ptr) {
 				ptr->add_ref();
 			}
@@ -193,33 +208,33 @@ namespace mgb { namespace sos {
 
 	public:
 		constexpr ConstHandle() noexcept = default;
-		ConstHandle(const ConstHandle& other) noexcept
+		constexpr ConstHandle(const ConstHandle& other) noexcept
 			: ptr(other.ptr)
 		{
 			inc_ref();
 		}
-		ConstHandle(ConstHandle&& other) noexcept
+		constexpr ConstHandle(ConstHandle&& other) noexcept
 			: ptr(std::exchange(other.ptr, nullptr))
 		{
 		}
-		ConstHandle(Handle<T>&& other) noexcept
+		constexpr ConstHandle( Handle<T>&& other ) noexcept
 			: ptr(std::exchange(other.ptr, nullptr))
 		{
 		}
-		ConstHandle& operator=(const ConstHandle& other) noexcept
+		constexpr ConstHandle& operator=(const ConstHandle& other) noexcept
 		{
 			other.inc_ref();
 			dec_ref();
 			ptr = other.ptr;
 			return *this;
 		}
-		ConstHandle& operator=(ConstHandle&& other) noexcept
+		constexpr ConstHandle& operator=( ConstHandle&& other ) noexcept
 		{
 			dec_ref();
 			ptr = std::exchange(other.ptr, nullptr);
 			return *this;
 		}
-		ConstHandle& operator=(Handle<T>&& other) noexcept
+		constexpr ConstHandle& operator=(Handle<T>&& other) noexcept
 		{
 			dec_ref();
 			ptr = std::exchange(other.ptr, nullptr);
@@ -245,11 +260,11 @@ namespace mgb { namespace sos {
 			dec_ref();
 		}
 
-		bool empty() const noexcept
+		constexpr bool empty() const noexcept
 		{
 			return ptr != nullptr;
 		}
-		bool unique() const noexcept
+		constexpr bool unique() const noexcept
 		{
 			assert(ptr);
 			return ptr->is_uniquely_owned();
